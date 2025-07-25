@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import "model/products.dart";
+import 'model/products.dart';
 // import 'home_page.dart';
 
 class DetailPage extends StatefulWidget {
@@ -61,7 +61,7 @@ class _DetailPageState extends State<DetailPage> {
                       children: [
                         const Icon(Icons.star, color: Colors.amber),
                         Text(
-                          "(${product.rating})",
+                          '(${product.rating})',
                           style: const TextStyle(color: Colors.grey, fontSize: 12),
                         ),
                       ],
@@ -84,7 +84,7 @@ class _DetailPageState extends State<DetailPage> {
                 ),
                 if (product.sizes != null && (product.sizes?.isNotEmpty ?? false)) ...[
                   const SizedBox(height: 20),
-                  const Text("Size:", style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text('Size:', style: TextStyle(fontWeight: FontWeight.bold)),
                   SizedBox(
                     height: 48,
                     child: ListView.builder(

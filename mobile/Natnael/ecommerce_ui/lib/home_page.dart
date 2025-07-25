@@ -8,7 +8,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  List<Map<String, dynamic>> products = [];
+  final List<Map<String, dynamic>> products = [];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -25,40 +26,40 @@ class _HomePageState extends State<HomePage> {
             decoration: BoxDecoration(
               color: Colors.grey[300],
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [
+              boxShadow: const [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.2),
+                  color: Color.fromARGB(51, 158, 158, 158),
                   blurRadius: 4,
                   offset: Offset(0, 2),
                 ),
               ],
             ),
-            child: Center(
+            child: const Center(
               child: Text(
-                "Y", // Use user initials or image
+                'Y', // Use user initials or image
                 style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
               ),
             ),
           ),
         ),
-        title: Padding(
-          padding: const EdgeInsets.only(left: 2),
+        title: const Padding(
+          padding: EdgeInsets.only(left: 2),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'July 22, 2025',
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
               Row(
-                children: const [
+                children: [
                   Text(
-                    "Hello,",
+                    'Hello,',
                     style: TextStyle(color: Colors.grey, fontSize: 18),
                   ),
                   SizedBox(width: 4),
                   Text(
-                    "Yohannes",
+                    'Yohannes',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                   ),
                 ],
@@ -75,26 +76,26 @@ class _HomePageState extends State<HomePage> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
-                boxShadow: [
+                boxShadow: const [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.2),
+                    color: Color.fromARGB(51, 158, 158, 158),
                     blurRadius: 4,
                     offset: Offset(0, 2),
                   ),
                 ],
               ),
-              child: Icon(Icons.notifications_none_rounded, color: Colors.grey[700]),
+              child: const Icon(Icons.notifications_none_rounded, color: Color(0xFF616161)),
             ),
           ),
         ],
       ),
       body: Padding(
-        padding: EdgeInsets.only(top: 10),
+        padding: const EdgeInsets.only(top: 10),
         child: Column(
           children: <Widget>[
             ListTile(
-              title: Text(
-                "Available Products",
+              title: const Text(
+                'Available Products',
                 style: TextStyle(
                   color: Colors.black,
                   fontWeight: FontWeight.bold,
@@ -107,16 +108,16 @@ class _HomePageState extends State<HomePage> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.2),
+                      color: Color.fromARGB(51, 158, 158, 158),
                       blurRadius: 4,
                       offset: Offset(0, 2),
                     ),
                   ],
                 ),
                 child: IconButton(
-                  icon: Icon(Icons.search, color: Colors.blue),
+                  icon: const Icon(Icons.search, color: Colors.blue),
                   onPressed: () {
                     Navigator.pushNamed(context, '/SearchPage');
                   },
@@ -130,20 +131,22 @@ class _HomePageState extends State<HomePage> {
                   ...SharedResource().buildCards(context),
                   ...products.map((product) {
                     return Card(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 2,
+                      margin: const EdgeInsets.symmetric(vertical: 8),
                       child: ListTile(
-                        title: Text(product['name'] ?? ''),
+                        title: Text(product['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Text(product['description'] ?? ''),
-                        trailing: Text('\$${product['price'] ?? ''}'),
+                        trailing: Text('\$${product['price'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.bold)),
                       ),
                     );
-                  }).toList(),
+                  }),
                 ],
               ),
             ),
           ],
         ),
       ),
-
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final result = await Navigator.pushNamed(context, '/AddUpdatePage');
@@ -151,15 +154,18 @@ class _HomePageState extends State<HomePage> {
             setState(() {
               products.add(result);
             });
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Product added!')),
-            );
+            if (mounted) {
+              // ignore: use_build_context_synchronously
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Product added!')),
+              );
+            }
           }
         },
         backgroundColor: Colors.blue,
         shape: const CircleBorder(),
         child: const Icon(Icons.add, color: Colors.white),
-      ),
+             ),
     );
   }
 }

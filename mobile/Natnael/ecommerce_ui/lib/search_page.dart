@@ -1,5 +1,6 @@
-import 'package:ecommerce_ui/shared_resource.dart';
 import 'package:flutter/material.dart';
+
+import 'shared_resource.dart';
 
 
 class SearchPage extends StatefulWidget {
@@ -24,7 +25,7 @@ class _SearchPageState extends State<SearchPage> {
             Navigator.pop(context);
           },
         ),
-        title: const Text("Search Product"),
+        title: const Text('Search Product'),
         centerTitle: true,
       ),
       body: SafeArea(
@@ -38,7 +39,7 @@ class _SearchPageState extends State<SearchPage> {
                     child: TextField(
                       controller: _searchController,
                       decoration: InputDecoration(
-                        hintText: "Type here",
+                        hintText: 'Type here',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -74,14 +75,14 @@ class _SearchPageState extends State<SearchPage> {
             ),
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Category"),
+                  const Text('Category'),
                   const SizedBox(height: 8),
                   TextField(
                     decoration: InputDecoration(
@@ -92,7 +93,7 @@ class _SearchPageState extends State<SearchPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text("Price"),
+                  const Text('Price'),
                   SizedBox(
                     width: double.infinity,
                     height: 60,
@@ -132,7 +133,7 @@ class _SearchPageState extends State<SearchPage> {
                           );
                         },
                         child: const Text(
-                          "APPLY",
+                          'APPLY',
                           style: TextStyle(color: Colors.white, fontSize: 16),
                         ),
                       ),

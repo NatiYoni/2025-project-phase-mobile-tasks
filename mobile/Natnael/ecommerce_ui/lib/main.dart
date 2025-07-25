@@ -1,8 +1,9 @@
-import 'package:ecommerce_ui/add_update_page.dart';
-import 'package:ecommerce_ui/detail_page.dart';
-import 'package:ecommerce_ui/search_page.dart';
 import 'package:flutter/material.dart';
+
+import 'add_update_page.dart';
+import 'detail_page.dart';
 import 'home_page.dart';
+import 'search_page.dart';
 
 void main() {
   runApp(const MyApp());
