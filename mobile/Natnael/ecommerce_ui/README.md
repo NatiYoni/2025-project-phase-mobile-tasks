@@ -42,15 +42,13 @@ Error handling is managed in the `core` layer using custom `Failure` classes. Al
   <tr>
     <td><img src="screen_shots/Screenshot_20250725_112255.jpg" width="250"/></td>
     <td><img src="screen_shots/Screenshot_20250725_112303.jpg" width="250"/></td>
-  </tr>
-  <tr>
     <td><img src="screen_shots/Screenshot_20250725_112309.jpg" width="250"/></td>
-    <td><img src="screen_shots/Screenshot_20250725_112318.jpg" width="250"/></td>
   </tr>
   <tr>
+    <td><img src="screen_shots/Screenshot_20250725_112318.jpg" width="250"/></td>
     <td><img src="screen_shots/Screenshot_20250725_112328.jpg" width="250"/></td>
-    <td></td>
   </tr>
+  
 </table>
 
 ## Getting Started
