@@ -1,5 +1,5 @@
 import 'package:dartz/dartz.dart';
-import 'package:ecommerce_ui/core/platform/network_info.dart';
+import 'package:ecommerce_ui/core/network/network_info.dart';
 import 'package:ecommerce_ui/features/product/data/datasources/product_local_data_source.dart';
 import 'package:ecommerce_ui/features/product/data/datasources/product_remote_data_source.dart';
 import 'package:ecommerce_ui/features/product/data/models/product_model.dart';
