@@ -12,16 +12,16 @@ class CreateProductUsecase extends Usecase<Product,Params>{
 
   @override
   Future<Either<Failure, Product>> call(Params params) async{
-    return await repository.updateProduct(params.id);
+    return await repository.updateProduct(params.product);
   }
 
 }
 
 class Params extends Equatable{
-  final int id;
-  const Params(this.id);
+  final Product product;
+  const Params(this.product);
 
   @override
-  List<Object?> get props => [id];
+  List<Object?> get props => [product];
   
 }

@@ -13,7 +13,7 @@ class ViewAllProductsUseCase extends Usecase<List<Product>, Params>{
 
   @override
   Future<Either<Failure, List<Product>>> call(Params params) async{
-    return await repository.getProduct();
+    return await repository.getProducts();
   }
   
 }

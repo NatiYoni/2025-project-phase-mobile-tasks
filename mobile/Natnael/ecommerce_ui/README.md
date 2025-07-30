@@ -92,3 +92,5 @@ flutter test
 - All navigation uses named routes for clarity and maintainability.
 
 ## Author
+
+Natnael Yonas

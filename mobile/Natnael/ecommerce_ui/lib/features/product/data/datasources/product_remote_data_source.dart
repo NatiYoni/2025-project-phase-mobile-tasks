@@ -8,13 +8,13 @@ abstract class ProductRemoteDataSource {
 
 
   ///deletes product from the api
-  Future<ProductModel> deleteProduct(int id);
+  Future<void> deleteProduct(int id);
 
 
   /// Calls the API endpoint to get products.
   ///
   /// Throws a [ServerException] for all error codes.
-  Future<List<ProductModel>> getProduct() ;
+  Future<List<ProductModel>> getProducts() ;
 
   /// Calls the API endpoint to get products by id.
   ///
@@ -22,5 +22,5 @@ abstract class ProductRemoteDataSource {
   Future<ProductModel> getProductById(int id);
 
   ///updates product from the api
-  Future<ProductModel> updateProduct(int id);
+  Future<ProductModel> updateProduct(ProductModel product);
 }
