@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import 'package:ecommerce_ui/core/error/failure.dart';
 import 'package:ecommerce_ui/core/network/network_info.dart';
 import 'package:ecommerce_ui/features/product/data/datasources/product_local_data_source.dart';
 import 'package:ecommerce_ui/features/product/data/datasources/product_remote_data_source.dart';
@@ -32,6 +33,15 @@ void main() {
     );
   });
 
+  void runTests(String description, Function body, {required bool isOnline}) {
+    group(description, () {
+      setUp(() {
+        when(mockNetworkInfo.isConnected).thenAnswer((_) async => isOnline);
+      });
+      body();
+    });
+  }
+
   final tProductModels = [
     const ProductModel(
       id: '1',
@@ -54,142 +64,157 @@ void main() {
   group('createProduct', () {
     final Product tProduct = tProduct1;
 
-    test('should check if the device is online', () async {
-      when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      await repository.createProduct(tProduct);
-      verify(mockNetworkInfo.isConnected);
+    runTests('when device is online', isOnline: true, () {
+      test(
+          'should call remote data source and cache locally when creating a product',
+          () async {
+        // arrange
+        when(mockRemoteDataSource.createProduct(any))
+            .thenAnswer((_) async => tProduct1);
+        when(mockLocalDataSource.cacheProduct(any))
+            .thenAnswer((_) async => Future.value());
+
+        final result = await repository.createProduct(tProduct);
+        // assert
+        verify(mockRemoteDataSource.createProduct(tProduct1));
+        verify(mockLocalDataSource.cacheProduct(tProduct1));
+        expect(result, Right(tProduct1));
+      });
     });
 
-    test('should call remote data source and cache locally when online', () async {
-      when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(mockRemoteDataSource.createProduct(tProduct1)).thenAnswer((_) async => tProduct1);
-      when(mockLocalDataSource.cacheProduct(tProduct1)).thenAnswer((_) async => Future.value());
-
-      final result = await repository.createProduct(tProduct);
-
-      verify(mockRemoteDataSource.createProduct(tProduct1));
-      verify(mockLocalDataSource.cacheProduct(tProduct1));
-      expect(result, Right(tProduct1));
-    });
-
-    test('should return NetworkFailure when offline', () async {
-      when(mockNetworkInfo.isConnected).thenAnswer((_) async => false);
-      final result = await repository.createProduct(tProduct);
-      expect(result.isLeft(), true);
+    runTests('when device is offline', isOnline: false, () {
+      test('should return NetworkFailure', () async {
+        // act
+        final result = await repository.createProduct(tProduct);
+        // assert
+        expect(result, Left(NetworkFailure()));
+        verifyZeroInteractions(mockRemoteDataSource);
+        verifyZeroInteractions(mockLocalDataSource);
+      });
     });
   });
 
   group('getProducts', () {
-    test('should check if the device is online', () async {
-      when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      await repository.getProducts();
-      verify(mockNetworkInfo.isConnected);
+    runTests('when device is online', isOnline: true, () {
+      test('should return remote data and cache it locally', () async {
+        // arrange
+        when(mockRemoteDataSource.getProducts())
+            .thenAnswer((_) async => tProductModels);
+        when(mockLocalDataSource.cacheProducts(any))
+            .thenAnswer((_) async => Future.value());
+
+        final result = await repository.getProducts();
+        // assert
+        verify(mockRemoteDataSource.getProducts());
+        verify(mockLocalDataSource.cacheProducts(tProductModels));
+        expect(result, Right(tProductModels));
+      });
     });
 
-    test('should return remote data and cache it locally when online', () async {
-      when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(mockRemoteDataSource.getProducts()).thenAnswer((_) async => tProductModels);
-      when(mockLocalDataSource.cacheProducts(tProductModels)).thenAnswer((_) async => Future.value());
-
-      final result = await repository.getProducts();
-
-      verify(mockRemoteDataSource.getProducts());
-      verify(mockLocalDataSource.cacheProducts(tProductModels));
-      expect(result, Right(tProductModels));
-    });
-
-    test('should return locally cached data when present and offline', () async {
-      when(mockNetworkInfo.isConnected).thenAnswer((_) async => false);
-      when(mockLocalDataSource.getCachedProducts()).thenAnswer((_) async => tProductModels);
-
-      final result = await repository.getProducts();
-
-      verify(mockLocalDataSource.getCachedProducts());
-      expect(result, Right(tProductModels));
+    runTests('when device is offline', isOnline: false, () {
+      test('should return locally cached data when present', () async {
+        // arrange
+        when(mockLocalDataSource.getCachedProducts())
+            .thenAnswer((_) async => tProductModels);
+        // act
+        final result = await repository.getProducts();
+        // assert
+        verify(mockLocalDataSource.getCachedProducts());
+        verifyZeroInteractions(mockRemoteDataSource);
+        expect(result, Right(tProductModels));
+      });
     });
   });
 
   group('getProductById', () {
-    test('should check if the device is online', () async {
-      when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      await repository.getProductById(tId);
-      verify(mockNetworkInfo.isConnected);
+    runTests('when device is online', isOnline: true, () {
+      test('should return remote data and cache it locally', () async {
+        // arrange
+        when(mockRemoteDataSource.getProductById(any))
+            .thenAnswer((_) async => tProduct1);
+        when(mockLocalDataSource.cacheProduct(any))
+            .thenAnswer((_) async => Future.value());
+
+        final result = await repository.getProductById(tId);
+        // assert
+        verify(mockRemoteDataSource.getProductById(tId));
+        verify(mockLocalDataSource.cacheProduct(tProduct1));
+        expect(result, Right(tProduct1));
+      });
     });
 
-    test('should return remote data and cache it locally when online', () async {
-      when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(mockRemoteDataSource.getProductById(tId)).thenAnswer((_) async => tProduct1);
-      when(mockLocalDataSource.cacheProduct(tProduct1)).thenAnswer((_) async => Future.value());
-
-      final result = await repository.getProductById(tId);
-
-      verify(mockRemoteDataSource.getProductById(tId));
-      verify(mockLocalDataSource.cacheProduct(tProduct1));
-      expect(result, Right(tProduct1));
-    });
-
-    test('should return cached data when offline', () async {
-      when(mockNetworkInfo.isConnected).thenAnswer((_) async => false);
-      when(mockLocalDataSource.getCachedProductById(tId)).thenAnswer((_) async => tProduct1);
-
-      final result = await repository.getProductById(tId);
-
-      verify(mockLocalDataSource.getCachedProductById(tId));
-      expect(result, Right(tProduct1));
+    runTests('when device is offline', isOnline: false, () {
+      test('should return cached data', () async {
+        // arrange
+        when(mockLocalDataSource.getCachedProductById(any))
+            .thenAnswer((_) async => tProduct1);
+        // act
+        final result = await repository.getProductById(tId);
+        // assert
+        verify(mockLocalDataSource.getCachedProductById(tId));
+        verifyZeroInteractions(mockRemoteDataSource);
+        expect(result, Right(tProduct1));
+      });
     });
   });
 
   group('updateProduct', () {
     final Product tProduct = tProduct1;
 
-    test('should check if the device is online', () async {
-      when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      await repository.updateProduct(tProduct);
-      verify(mockNetworkInfo.isConnected);
+    runTests('when device is online', isOnline: true, () {
+      test('should update remote and cache locally', () async {
+        // arrange
+        when(mockRemoteDataSource.updateProduct(any))
+            .thenAnswer((_) async => tProduct1);
+        when(mockLocalDataSource.cacheProduct(any))
+            .thenAnswer((_) async => Future.value());
+
+        final result = await repository.updateProduct(tProduct);
+        // assert
+        verify(mockRemoteDataSource.updateProduct(tProduct1));
+        verify(mockLocalDataSource.cacheProduct(tProduct1));
+        expect(result, Right(tProduct1));
+      });
     });
 
-    test('should update remote and cache locally when online', () async {
-      when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(mockRemoteDataSource.updateProduct(tProduct1)).thenAnswer((_) async => tProduct1);
-      when(mockLocalDataSource.cacheProduct(tProduct1)).thenAnswer((_) async => Future.value());
-
-      final result = await repository.updateProduct(tProduct);
-
-      verify(mockRemoteDataSource.updateProduct(tProduct1));
-      verify(mockLocalDataSource.cacheProduct(tProduct1));
-      expect(result, Right(tProduct1));
-    });
-
-    test('should return NetworkFailure when offline', () async {
-      when(mockNetworkInfo.isConnected).thenAnswer((_) async => false);
-      final result = await repository.updateProduct(tProduct);
-      expect(result.isLeft(), true);
+    runTests('when device is offline', isOnline: false, () {
+      test('should return NetworkFailure', () async {
+        // act
+        final result = await repository.updateProduct(tProduct);
+        // assert
+        expect(result, Left(NetworkFailure()));
+        verifyZeroInteractions(mockRemoteDataSource);
+        verifyZeroInteractions(mockLocalDataSource);
+      });
     });
   });
 
   group('deleteProduct', () {
-    test('should check if the device is online', () async {
-      when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      await repository.deleteProduct(tId);
-      verify(mockNetworkInfo.isConnected);
+    runTests('when device is online', isOnline: true, () {
+      test('should delete remote and local data', () async {
+        // arrange
+        when(mockRemoteDataSource.deleteProduct(any))
+            .thenAnswer((_) async => Future.value());
+        when(mockLocalDataSource.deleteCachedProduct(any))
+            .thenAnswer((_) async => Future.value());
+
+        final result = await repository.deleteProduct(tId);
+        // assert
+        verify(mockRemoteDataSource.deleteProduct(tId));
+        verify(mockLocalDataSource.deleteCachedProduct(tId));
+        expect(result, const Right(null));
+      });
     });
 
-    test('should delete remote and local when online', () async {
-      when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(mockRemoteDataSource.deleteProduct(tId)).thenAnswer((_) async => Future.value());
-      when(mockLocalDataSource.deleteCachedProduct(tId)).thenAnswer((_) async => Future.value());
-
-      final result = await repository.deleteProduct(tId);
-
-      verify(mockRemoteDataSource.deleteProduct(tId));
-      verify(mockLocalDataSource.deleteCachedProduct(tId));
-      expect(result, const Right(null));
-    });
-
-    test('should return NetworkFailure when offline', () async {
-      when(mockNetworkInfo.isConnected).thenAnswer((_) async => false);
-      final result = await repository.deleteProduct(tId);
-      expect(result.isLeft(), true);
+    runTests('when device is offline', isOnline: false, () {
+      test('should return NetworkFailure', () async {
+        // act
+        final result = await repository.deleteProduct(tId);
+        // assert
+        expect(result, Left(NetworkFailure()));
+        verifyZeroInteractions(mockRemoteDataSource);
+        verifyZeroInteractions(mockLocalDataSource);
+      });
     });
   });
 }

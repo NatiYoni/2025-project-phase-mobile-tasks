@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:ecommerce_ui/core/error/exceptions.dart';
 import 'package:ecommerce_ui/features/product/data/models/product_model.dart';
 import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
@@ -34,71 +35,93 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
 
   ProductRemoteDataSourceImpl({required this.client});
 
+  Future<T> _performRequest<T>(
+    Future<http.Response> Function() request, {
+    required int successStatusCode,
+    required T Function(dynamic data) fromJson,
+    required String error,
+  }) async {
+    try {
+      final response = await request();
+      if (response.statusCode == successStatusCode) {
+        if (response.body.isEmpty) {
+          return fromJson(null);
+        }
+        final jsonResponse = jsonDecode(response.body);
+        return fromJson(jsonResponse['data']);
+      } else {
+        throw ServerException();
+      }
+    } catch (e) {
+      throw ServerException();
+    }
+  }
+
   @override
   Future<ProductModel> createProduct(ProductModel product) async {
-    final response = await client.post(
-      Uri.parse('$BASE_URL/products'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(product.toJson()),
+    return _performRequest(
+      () => client.post(
+        Uri.parse('$BASE_URL/products'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(product.toJson()),
+      ),
+      successStatusCode: 201,
+      fromJson: (data) => ProductModel.fromJson(data),
+      error: 'Failed to create product',
     );
-    if (response.statusCode == 201) {
-      return ProductModel.fromJson(jsonDecode(response.body)['data']);
-    } else {
-      throw Exception('Failed to create product');
-    }
   }
 
   @override
   Future<void> deleteProduct(String id) async {
-    final response = await client.delete(
-      Uri.parse('$BASE_URL/products/$id'),
-      headers: {'Content-Type': 'application/json'},
+    return _performRequest(
+      () => client.delete(
+        Uri.parse('$BASE_URL/products/$id'),
+        headers: {'Content-Type': 'application/json'},
+      ),
+      successStatusCode: 204,
+      fromJson: (_) => null,
+      error: 'Failed to delete product',
     );
-    if (response.statusCode != 204) {
-      throw Exception('Failed to delete product');
-    }
   }
 
   @override
   Future<ProductModel> getProductById(String id) async {
-    final response = await client.get(
-      Uri.parse('$BASE_URL/products/$id'),
-      headers: {'Content-Type': 'application/json'},
+    return _performRequest(
+      () => client.get(
+        Uri.parse('$BASE_URL/products/$id'),
+        headers: {'Content-Type': 'application/json'},
+      ),
+      successStatusCode: 200,
+      fromJson: (data) => ProductModel.fromJson(data),
+      error: 'Failed to load product',
     );
-    if (response.statusCode == 200) {
-      return ProductModel.fromJson(jsonDecode(response.body)['data']);
-    } else {
-      throw Exception('Failed to load product');
-    }
   }
 
   @override
   Future<List<ProductModel>> getProducts() async {
-    final response = await client.get(
-      Uri.parse('$BASE_URL/products'),
-      headers: {'Content-Type': 'application/json'},
+    return _performRequest(
+      () => client.get(
+        Uri.parse('$BASE_URL/products'),
+        headers: {'Content-Type': 'application/json'},
+      ),
+      successStatusCode: 200,
+      fromJson: (data) =>
+          (data as List).map((json) => ProductModel.fromJson(json)).toList(),
+      error: 'Failed to load products',
     );
-    if (response.statusCode == 200) {
-      final List<dynamic> jsonList = jsonDecode(response.body)['data'];
-      return jsonList
-          .map((json) => ProductModel.fromJson(json))
-          .toList();
-    } else {
-      throw Exception('Failed to load products');
-    }
   }
 
   @override
   Future<ProductModel> updateProduct(ProductModel product) async {
-    final response = await client.put(
-      Uri.parse('$BASE_URL/products/${product.id}'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(product.toJson()),
+    return _performRequest(
+      () => client.put(
+        Uri.parse('$BASE_URL/products/${product.id}'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(product.toJson()),
+      ),
+      successStatusCode: 200,
+      fromJson: (data) => ProductModel.fromJson(data),
+      error: 'Failed to update product',
     );
-    if (response.statusCode == 200) {
-      return ProductModel.fromJson(jsonDecode(response.body)['data']);
-    } else {
-      throw Exception('Failed to update product');
-    }
   }
 }

@@ -28,6 +28,17 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource{
   final SharedPreferences sharedPreferences;
   
   ProductLocalDataSourceImpl(this.sharedPreferences);
+
+  List<Map<String, dynamic>> _getCachedProductList() {
+    final jsonString = sharedPreferences.getString(CACHED_PRODUCTS_LIST);
+    if (jsonString != null) {
+      return (json.decode(jsonString) as List)
+          .map((e) => e as Map<String, dynamic>)
+          .toList();
+    } else {
+      throw CacheException();
+    }
+  }
   
   @override
   Future<void> cacheProduct(ProductModel productToCache) {
@@ -49,42 +60,26 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource{
 
   @override
   Future<void> deleteCachedProduct(String id) async {
-    final jsonString = sharedPreferences.getString(CACHED_PRODUCTS_LIST);
-    if (jsonString != null) {
-      List<dynamic> jsonList = json.decode(jsonString);
-      jsonList.removeWhere((item) => ProductModel.fromJson(item).id == id);
-      await sharedPreferences.setString(
-          CACHED_PRODUCTS_LIST, json.encode(jsonList));
-    } else {
-      throw CacheException();
-    }
+    final jsonList = _getCachedProductList();
+    jsonList.removeWhere((item) => item['id'] == id);
+    await sharedPreferences.setString(
+        CACHED_PRODUCTS_LIST, json.encode(jsonList));
   }
 
   @override
   Future<ProductModel> getCachedProductById(String id) {
-    final jsonString = sharedPreferences.getString(CACHED_PRODUCTS_LIST);
-    if (jsonString != null) {
-      List<dynamic> jsonList = json.decode(jsonString);
-      final productJson =
-          jsonList.firstWhere((item) => ProductModel.fromJson(item).id == id, orElse: () => null);
-      if (productJson != null) {
-        return Future.value(ProductModel.fromJson(productJson));
-      }
-    }
-    throw CacheException();
+    final jsonList = _getCachedProductList();
+    final productJson =
+        jsonList.firstWhere((item) => item['id'] == id, orElse: () => throw CacheException());
+    return Future.value(ProductModel.fromJson(productJson));
   }
 
   @override
   Future<List<ProductModel>> getCachedProducts() {
-    final jsonString = sharedPreferences.getString(CACHED_PRODUCTS_LIST);
-    if (jsonString != null) {
-      final List<dynamic> jsonList = json.decode(jsonString);
-      final products =
-          jsonList.map((item) => ProductModel.fromJson(item)).toList();
-      return Future.value(products);
-    } else {
-      throw CacheException();
-    }
+    final jsonList = _getCachedProductList();
+    final products =
+        jsonList.map((item) => ProductModel.fromJson(item)).toList();
+    return Future.value(products);
   }
 
   @override

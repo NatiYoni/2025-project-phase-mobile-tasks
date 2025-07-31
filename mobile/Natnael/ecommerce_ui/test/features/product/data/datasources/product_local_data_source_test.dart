@@ -22,6 +22,16 @@ void main() {
     dataSource = ProductLocalDataSourceImpl(mockSharedPreferences);
   });
 
+  void testCacheExceptionForProductList(Function() call) {
+    test('should throw a CacheException when there is no cached value', () {
+      // arrange
+      when(mockSharedPreferences.getString(CACHED_PRODUCTS_LIST))
+          .thenReturn(null);
+      // act & assert
+      expect(call, throwsA(const TypeMatcher<CacheException>()));
+    });
+  }
+
   group('getLastProduct', () {
     final tProductModel =
         ProductModel.fromJson(json.decode(fixture('product_cached.json')));
@@ -114,13 +124,7 @@ void main() {
       expect(result, equals(tProductModelList));
     });
 
-    test('should throw a CacheException when there is no cahe value',
-        () async {
-      when(mockSharedPreferences.getString(CACHED_PRODUCTS_LIST))
-          .thenReturn(null);
-      final call = dataSource.getCachedProducts;
-      expect(call, throwsA(const TypeMatcher<CacheException>()));
-    });
+    testCacheExceptionForProductList(() => dataSource.getCachedProducts());
   });
 
   group('getCachedProductById', () {
@@ -138,53 +142,47 @@ void main() {
       expect(result, equals(tProductModel));
     });
 
-    test('should throw a CacheException when there is no cached value',
+    testCacheExceptionForProductList(
+        () => dataSource.getCachedProductById(tProductModel.id));
+
+    test('should throw a CacheException when the product is not found',
         () async {
       when(mockSharedPreferences.getString(CACHED_PRODUCTS_LIST))
-          .thenReturn(null);
+          .thenReturn(fixture('products_cached.json'));
 
       final call = dataSource.getCachedProductById;
 
-      expect(() => call(tProductModel.id),
+      expect(() => call('non-existent-id'),
           throwsA(const TypeMatcher<CacheException>()));
     });
   });
 
   group('deleteCachedProduct', () {
-    final tProductModelList = [
-      ProductModel.fromJson(json.decode(fixture('product_cached.json'))),
-    ];
+    
     final tId = '15';
 
     test('should call SharedPreferences to delete the data', () async {
-      final updatedList = json.decode(fixture('products_cached.json')) as List;
-      updatedList.removeWhere((item) => ProductModel.fromJson(item).id == tId);
-      final expectedJsonString = json.encode(updatedList);
+      final List<dynamic> list =
+          json.decode(fixture('products_cached.json'));
+      list.removeWhere((item) => item['id'] == tId);
+      final expectedJsonString = json.encode(list);
 
       when(mockSharedPreferences.getString(CACHED_PRODUCTS_LIST))
           .thenReturn(fixture('products_cached.json'));
-      when(mockSharedPreferences.setString(
-              CACHED_PRODUCTS_LIST, expectedJsonString))
+      when(mockSharedPreferences.setString(any, any))
           .thenAnswer((_) async => true);
       // act
       await dataSource.deleteCachedProduct(tId);
       // assert
-
+      verify(mockSharedPreferences.getString(CACHED_PRODUCTS_LIST));
       verify(mockSharedPreferences.setString(
         CACHED_PRODUCTS_LIST,
         expectedJsonString,
       ));
     });
 
-    test('should throw a CacheException when there is no cached value',
-        () async {
-      when(mockSharedPreferences.getString(CACHED_PRODUCTS_LIST))
-          .thenReturn(null);
-
-      final call = dataSource.deleteCachedProduct;
-
-      expect(() => call(tId), throwsA(const TypeMatcher<CacheException>()));
-    });
+    testCacheExceptionForProductList(() => dataSource.deleteCachedProduct(tId));
   });
 }
+
 

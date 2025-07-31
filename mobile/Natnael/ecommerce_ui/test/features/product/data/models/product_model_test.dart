@@ -37,19 +37,12 @@ void main() {
 
   group('toJson', () {
     test('should return a json map containing the proper data', () async {
-      //arrange
-
       //act
       final result = tProductModel.toJson();
       //assert
-      final expectedMap = {
-        'id': '667275f2b905525c145fe097',
-        'name': 'Test Product',
-        'price': 123.45,
-        'description': 'A single product for testing.',
-        'imageUrl': 'https://example.com/product.png'
-      };
+      final expectedMap = json.decode(fixture('product.json'))['data'];
       expect(result, expectedMap);
     });
   });
 }
+        
