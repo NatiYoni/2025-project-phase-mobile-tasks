@@ -34,14 +34,14 @@ void main() {
 
   final tProductModels = [
     const ProductModel(
-      id: 1,
+      id: '1',
       name: 'name',
       description: 'desc',
       imageUrl: 'img',
       price: 100,
     ),
     const ProductModel(
-      id: 2,
+      id: '2',
       name: 'name2',
       description: 'desc2',
       imageUrl: 'img2',
@@ -49,7 +49,7 @@ void main() {
     ),
   ];
   final tProduct1 = tProductModels[0];
-  final tId = 1;
+  final tId = '1';
 
   group('createProduct', () {
     final Product tProduct = tProduct1;

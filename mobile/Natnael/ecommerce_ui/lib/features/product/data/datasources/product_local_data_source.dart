@@ -17,8 +17,8 @@ abstract class ProductLocalDataSource {
 
   Future<void> cacheProduct(ProductModel productToCache);
   Future<List<ProductModel>> getCachedProducts();
-  Future<ProductModel> getCachedProductById(int id);
-  Future<void> deleteCachedProduct(int id);
+  Future<ProductModel> getCachedProductById(String id);
+  Future<void> deleteCachedProduct(String id);
   Future<void> cacheProducts(List<ProductModel> products);
 }
 
@@ -48,7 +48,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource{
   }
 
   @override
-  Future<void> deleteCachedProduct(int id) async {
+  Future<void> deleteCachedProduct(String id) async {
     final jsonString = sharedPreferences.getString(CACHED_PRODUCTS_LIST);
     if (jsonString != null) {
       List<dynamic> jsonList = json.decode(jsonString);
@@ -61,7 +61,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource{
   }
 
   @override
-  Future<ProductModel> getCachedProductById(int id) {
+  Future<ProductModel> getCachedProductById(String id) {
     final jsonString = sharedPreferences.getString(CACHED_PRODUCTS_LIST);
     if (jsonString != null) {
       List<dynamic> jsonList = json.decode(jsonString);

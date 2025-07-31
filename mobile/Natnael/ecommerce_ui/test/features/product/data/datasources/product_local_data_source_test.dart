@@ -51,14 +51,14 @@ void main() {
   group('cacheProducts', () {
     final tProductModel = const [
       ProductModel(
-        id: 1,
+        id: '1',
         name: 'Test Product',
         description: 'A test product description',
         imageUrl: 'just image',
         price: 9.99,
       ),
       ProductModel(
-        id: 2,
+        id: '2',
         name: 'Product 2',
         description: 'product  2 description',
         imageUrl: 'this is an image',
@@ -154,7 +154,7 @@ void main() {
     final tProductModelList = [
       ProductModel.fromJson(json.decode(fixture('product_cached.json'))),
     ];
-    final tId = 15;
+    final tId = '15';
 
     test('should call SharedPreferences to delete the data', () async {
       final updatedList = json.decode(fixture('products_cached.json')) as List;

@@ -1,7 +1,9 @@
 {
-    "name" : "this is my name",
-    "id" : 15,
-    "description" : "this one is realy cool",
-    "imageUrl" : "here we go",
-    "price" : 284.0
+  "data": {
+    "id": "667275f2b905525c145fe097",
+    "name": "Test Product",
+    "price": 123.45,
+    "description": "A single product for testing.",
+    "imageUrl": "https://example.com/product.png"
+  }
 }

@@ -18,7 +18,7 @@ class DeleteProductUsecase  extends Usecase<void, Params>{
 
 class Params extends Equatable{
 
-  final int id;
+  final String id;
   const Params(this.id);
 
   @override
