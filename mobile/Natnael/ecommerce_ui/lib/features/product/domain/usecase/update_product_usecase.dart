@@ -6,9 +6,9 @@ import '../../../../core/usecases/usecase.dart';
 import '../entity/product.dart';
 import '../repository/ProductRepository.dart';
 
-class CreateProductUsecase extends Usecase<Product,Params>{
+class UpdateProductUsecase extends Usecase<Product,Params>{
   final ProductRepository repository;
-  CreateProductUsecase(this.repository);
+  UpdateProductUsecase(this.repository);
 
   @override
   Future<Either<Failure, Product>> call(Params params) async{

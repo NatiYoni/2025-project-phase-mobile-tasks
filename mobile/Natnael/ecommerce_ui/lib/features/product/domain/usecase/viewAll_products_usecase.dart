@@ -1,29 +1,18 @@
 import 'package:dartz/dartz.dart';
-import 'package:equatable/equatable.dart';
 
 import '../../../../core/error/failure.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../entity/product.dart';
 import '../repository/ProductRepository.dart';
 
-class ViewAllProductsUseCase extends Usecase<List<Product>, Params>{
+class ViewAllProductsUseCase extends Usecase<List<Product>, NoParams>{
 
   final ProductRepository repository;
   ViewAllProductsUseCase(this.repository);
 
   @override
-  Future<Either<Failure, List<Product>>> call(Params params) async{
+  Future<Either<Failure, List<Product>>> call(NoParams params) async{
     return await repository.getProducts();
   }
   
-}
-
-class Params extends Equatable{
-  final Product product;
-  
-  const Params(this.product);
-
-  @override
-  List<Object?> get props =>[];
-
 }

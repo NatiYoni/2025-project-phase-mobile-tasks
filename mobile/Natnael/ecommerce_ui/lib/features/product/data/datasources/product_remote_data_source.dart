@@ -1,8 +1,9 @@
 import 'dart:convert';
-import 'package:ecommerce_ui/core/error/exceptions.dart';
-import 'package:ecommerce_ui/features/product/data/models/product_model.dart';
+
 import 'package:http/http.dart' as http;
-import 'package:meta/meta.dart';
+
+import '../../../../core/error/exceptions.dart';
+import '../models/product_model.dart';
 
 abstract class ProductRemoteDataSource {
 
@@ -79,7 +80,7 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
         headers: {'Content-Type': 'application/json'},
       ),
       successStatusCode: 204,
-      fromJson: (_) => null,
+      fromJson: (_) {},
       error: 'Failed to delete product',
     );
   }
