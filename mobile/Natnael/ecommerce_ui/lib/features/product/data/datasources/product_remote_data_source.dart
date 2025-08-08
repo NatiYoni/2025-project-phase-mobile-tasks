@@ -32,7 +32,7 @@ abstract class ProductRemoteDataSource {
 
 class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
   final http.Client client;
-  static const BASE_URL = 'https://g5-flutter-learning-path-be.onrender.com/api/v1';
+  static const BASE_URL = 'https://g5-flutter-learning-path-be-tvum.onrender.com/api/v2';
 
   ProductRemoteDataSourceImpl({required this.client});
 

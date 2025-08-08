@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'features/authentication/presentation/pages/splash_page.dart';
 import 'injection_container.dart' as di;
 
 void main() async {
@@ -10,18 +11,12 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
       title: 'Product App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const Scaffold(
-        body: Center(
-          child: Text('Hello World'),
-        ),
-      ),
+      home: SplashPage(),
     );
   }
 }
