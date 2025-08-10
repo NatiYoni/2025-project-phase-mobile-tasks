@@ -3,17 +3,39 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../injection_container.dart';
 import '../bloc/product_bloc.dart';
+import '../../../chat/presentation/pages/chat_list_page.dart';
 import '../widgets/build_card.dart';
 import 'create_product_page.dart';
 
 class AllProductsPage extends StatefulWidget {
-  const AllProductsPage({super.key});
+  final String token; // auth token for chat navigation
+  final String? userName; // optional user name
+  const AllProductsPage({super.key, required this.token, this.userName});
 
   @override
   State<AllProductsPage> createState() => _AllProductsPageState();
 }
 
 class _AllProductsPageState extends State<AllProductsPage> {
+  late final String _todayLabel;
+  // TODO: Replace with real fetched user name once /users/me integrated
+  late String _userName;
+  String get _initials => _userName.isNotEmpty ? _userName.trim()[0].toUpperCase() : 'U';
+
+  @override
+  void initState() {
+    super.initState();
+  final now = DateTime.now();
+  _todayLabel = _formatDate(now);
+  _userName = widget.userName?.trim().isNotEmpty == true ? widget.userName!.trim() : 'User';
+  }
+
+  String _formatDate(DateTime d) {
+    const months = [
+      'January','February','March','April','May','June','July','August','September','October','November','December'
+    ];
+    return '${months[d.month-1]} ${d.day}, ${d.year}';
+  }
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -40,34 +62,33 @@ class _AllProductsPageState extends State<AllProductsPage> {
                 ),
               ],
             ),
-            child: const Center(
+            child: Center(
               child: Text(
-                'Y', // Use user initials or image
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+                _initials,
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
               ),
             ),
           ),
         ),
-
-        title: const Padding(
-          padding: EdgeInsets.only(left: 2),
+        title: Padding(
+          padding: const EdgeInsets.only(left: 2),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'July 22, 2025',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+                _todayLabel,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
               Row(
                 children: [
-                  Text(
+                  const Text(
                     'Hello,',
                     style: TextStyle(color: Colors.grey, fontSize: 18),
                   ),
-                  SizedBox(width: 4),
+                  const SizedBox(width: 4),
                   Text(
-                    'Yohannes',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    _userName,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                   ),
                 ],
               ),
@@ -76,6 +97,17 @@ class _AllProductsPageState extends State<AllProductsPage> {
         ),
 
         actions: [
+          // Chat icon to jump to chat section
+          IconButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ChatListPageWrapper(token: widget.token),
+                ),
+              );
+            },
+            icon: const Icon(Icons.chat_bubble_outline, color: Color(0xFF616161)),
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 24),
             child: Container(
@@ -109,7 +141,7 @@ class _AllProductsPageState extends State<AllProductsPage> {
                 itemBuilder: (context, index) {
                   final product = state.products[index];
       
-                  return BuildCards(context,product: product);
+                  return BuildCards(context,product: product, token: widget.token);
                 },
               );
             } else if (state is ErrorState) {

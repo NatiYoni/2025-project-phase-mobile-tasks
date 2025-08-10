@@ -1,5 +1,6 @@
 
 import '../../domain/entity/product.dart';
+import '../../../authentication/domain/entity/authentication.dart';
 
 class ProductModel extends Product {
   const ProductModel({
@@ -8,15 +9,27 @@ class ProductModel extends Product {
     required super.description,
     required super.imageUrl,
     required super.price,
+    super.seller,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
+    Authentication? seller;
+    final sellerJson = json['seller'];
+    if (sellerJson is Map<String, dynamic>) {
+      seller = Authentication(
+        id: sellerJson['_id']?.toString(),
+        name: sellerJson['name']?.toString(),
+        email: sellerJson['email']?.toString() ?? '',
+        password: null,
+      );
+    }
     return ProductModel(
-      id: json['id'],
-      name: json['name'],
-      description: json['description'],
-      imageUrl: json['imageUrl'],
-      price: (json['price'] as num).toDouble(),
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      imageUrl: json['imageUrl']?.toString() ?? '',
+      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      seller: seller,
     );
   }
 
@@ -26,7 +39,13 @@ class ProductModel extends Product {
       'name': name,
       'description': description,
       'imageUrl': imageUrl,
-      'price': price
+      'price': price,
+      if (seller != null)
+        'seller': {
+          '_id': seller!.id,
+          'name': seller!.name,
+          'email': seller!.email,
+        }
     };
   }
 

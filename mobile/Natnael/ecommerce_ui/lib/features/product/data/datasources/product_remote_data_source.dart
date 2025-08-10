@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
@@ -32,7 +33,7 @@ abstract class ProductRemoteDataSource {
 
 class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
   final http.Client client;
-  static const BASE_URL = 'https://g5-flutter-learning-path-be-tvum.onrender.com/api/v2';
+  static const BASE_URL = 'https://g5-flutter-learning-path-be-tvum.onrender.com/api/v1';
 
   ProductRemoteDataSourceImpl({required this.client});
 
@@ -60,16 +61,29 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
 
   @override
   Future<ProductModel> createProduct(ProductModel product) async {
-    return _performRequest(
-      () => client.post(
-        Uri.parse('$BASE_URL/products'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(product.toJson()),
-      ),
-      successStatusCode: 201,
-      fromJson: (data) => ProductModel.fromJson(data),
-      error: 'Failed to create product',
-    );
+    // Backend expects multipart/form-data with fields: name, description, price, image (file)
+    final uri = Uri.parse('$BASE_URL/products');
+    final request = http.MultipartRequest('POST', uri);
+    request.fields['name'] = product.name;
+    request.fields['description'] = product.description;
+    request.fields['price'] = product.price.toString();
+    if (product.imageUrl.isNotEmpty) {
+      final file = File(product.imageUrl);
+      if (await file.exists()) {
+        request.files.add(await http.MultipartFile.fromPath('image', file.path));
+      }
+    }
+    try {
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+      if (response.statusCode == 201) {
+        final jsonResponse = jsonDecode(response.body);
+        return ProductModel.fromJson(jsonResponse['data']);
+      }
+      throw ServerException();
+    } catch (_) {
+      throw ServerException();
+    }
   }
 
   @override
@@ -114,11 +128,17 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
 
   @override
   Future<ProductModel> updateProduct(ProductModel product) async {
+    // For now send JSON (without id/image unless changed) as backend sample shows simple body
+    final body = jsonEncode({
+      'name': product.name,
+      'description': product.description,
+      'price': product.price,
+    });
     return _performRequest(
       () => client.put(
         Uri.parse('$BASE_URL/products/${product.id}'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(product.toJson()),
+        body: body,
       ),
       successStatusCode: 200,
       fromJson: (data) => ProductModel.fromJson(data),

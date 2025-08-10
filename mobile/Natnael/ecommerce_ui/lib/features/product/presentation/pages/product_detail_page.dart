@@ -5,16 +5,23 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../injection_container.dart';
 import '../../domain/entity/product.dart';
 import '../bloc/product_bloc.dart';
+import '../../../chat/presentation/bloc/chat_bloc.dart';
+import '../../../chat/presentation/pages/chat_detail_page.dart';
 
 class ProductDetailPage extends StatelessWidget {
   final String productId;
+  final String? authToken; // needed to init chat socket
 
-  const ProductDetailPage({super.key, required this.productId});
+  const ProductDetailPage({super.key, required this.productId, this.authToken});
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => sl<ProductBloc>()..add(GetSingleProductEvent(productId)),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => sl<ProductBloc>()..add(GetSingleProductEvent(productId))),
+        if (authToken != null)
+          BlocProvider(create: (_) => sl<ChatBloc>()..add(InitializeSocketEvent(authToken!))),
+      ],
       child: BlocConsumer<ProductBloc, ProductState>(
         listener: (context, state) {
           if (state is ErrorState) {
@@ -35,30 +42,14 @@ class ProductDetailPage extends StatelessWidget {
               appBar: AppBar(
                 title: Text(state.product.name),
                 actions: [
-                  // IconButton(
-                  //   icon: const Icon(Icons.edit),
-                  //   onPressed: () async {
-                  //     final result = await Navigator.of(context).push(
-                  //       MaterialPageRoute(
-                  //         builder: (_) => const EditProductPage(product: state.product),
-                  //       ),
-                  //     );
-                  //     if (result == true) {
-                  //       // Refresh details if the product was updated
-                  //       context
-                  //           .read<ProductBloc>()
-                  //           .add(GetSingleProductEvent(productId));
-                  //     }
-                  //   },
-                  // ),
                   IconButton(
                     icon: const Icon(Icons.delete),
-                    onPressed: () =>
-                        _showDeleteConfirmationDialog(context, state.product.id),
+                    onPressed: () => _showDeleteConfirmationDialog(context, state.product.id),
                   ),
                 ],
               ),
               body: _buildProductDetails(context, state.product),
+              bottomNavigationBar: _ContactSellerBar(product: state.product, token: authToken),
             );
           }
           // For Initial and Loading states
@@ -141,6 +132,102 @@ class ProductDetailPage extends StatelessWidget {
               child: const Text('Delete', style: TextStyle(color: Colors.red)),
             ),
           ],
+        );
+      },
+    );
+  }
+}
+
+class _ContactSellerBar extends StatelessWidget {
+  final Product product;
+  final String? token;
+  const _ContactSellerBar({required this.product, this.token});
+
+  bool _isChatActionEnabled(ChatState state) {
+    // Allow user to press initiate when socket ready or after failure to retry.
+    return state is SocketReady || state is ChatsLoaded || state is ChatOperationFailure || state is ChatInitial;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final seller = product.seller;
+    return BlocConsumer<ChatBloc, ChatState>(
+      listenWhen: (prev, curr) => curr is ChatInitiated || curr is ChatOperationFailure,
+      listener: (context, state) {
+        if (state is ChatInitiated) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BlocProvider.value(
+                value: context.read<ChatBloc>(),
+                child: ChatDetailPage(chat: state.chat),
+              ),
+            ),
+          );
+        } else if (state is ChatOperationFailure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message)),
+          );
+        }
+      },
+      builder: (context, state) {
+  final enabled = seller != null && _isChatActionEnabled(state);
+        final isBusy = state is ChatInitiating || state is SocketInitializing;
+        return SafeArea(
+          top: false,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, -2))],
+            ),
+            child: Row(
+              children: [
+                if (seller != null)
+                  CircleAvatar(
+                    child: Text(
+                      (seller.name ?? seller.email).isNotEmpty
+                          ? (seller.name ?? seller.email)[0].toUpperCase()
+                          : '?',
+                    ),
+                  ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(seller?.name ?? 'Seller', style: const TextStyle(fontWeight: FontWeight.w600)),
+                      Text(product.name, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                    ],
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: enabled && !isBusy
+                      ? () {
+                          context.read<ChatBloc>().add(InitiateChatEvent(seller.id ?? ''));
+                        }
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1C59D2),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: isBusy
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.chat_bubble_outline, size: 18, color: Colors.white),
+                  label: Text(
+                    isBusy ? 'Starting…' : 'Contact us',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );

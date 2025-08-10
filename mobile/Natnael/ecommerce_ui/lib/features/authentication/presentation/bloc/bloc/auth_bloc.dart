@@ -14,7 +14,6 @@ part 'auth_state.dart';
 
 const String SERVER_FAILURE_MESSAGE = 'Server Failure';
 const String CACHE_FAILURE_MESSAGE = 'Cache Failure';
-const String NETWORK_FAILURE_MESSAGE = 'Network Failure';
 const String INVALID_INPUT_FAILURE_MESSAGE = 'Invalid Input - The number must be a positive integer';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
@@ -38,8 +37,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         return SERVER_FAILURE_MESSAGE;
       case CacheFailure _:
         return CACHE_FAILURE_MESSAGE;
-      case NetworkFailure _:
-        return NETWORK_FAILURE_MESSAGE;
       default:
         return 'Unexpected error';
     }
@@ -79,7 +76,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final failureOrSuccess = await signUp(sign_up_usecase.Params(event.auth));
     failureOrSuccess.fold(
       (failure) => emit(ErrorState(_mapFailureToMessage(failure))),
-      (authentication) => emit(SignUpState(authentication)),
+      (Authentication) => emit(SignUpState(Authentication.name ?? '')),
     );
   }
 

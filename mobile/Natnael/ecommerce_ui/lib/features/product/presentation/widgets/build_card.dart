@@ -4,8 +4,9 @@ import '../pages/product_detail_page.dart';
 
 class BuildCards extends StatelessWidget {
   final dynamic product;
+  final String? token;
 
-  const BuildCards(BuildContext context, {super.key, required this.product});
+  const BuildCards(BuildContext context, {super.key, required this.product, this.token});
 
   @override
   Widget build(BuildContext context) {
@@ -16,11 +17,10 @@ class BuildCards extends StatelessWidget {
         child: InkWell(
           onTap: () {
             Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                ProductDetailPage(productId: product.id),
-                          ),
-                        );
+              MaterialPageRoute(
+                builder: (_) => ProductDetailPage(productId: product.id, authToken: token),
+              ),
+            );
           },
 
           child: Column(

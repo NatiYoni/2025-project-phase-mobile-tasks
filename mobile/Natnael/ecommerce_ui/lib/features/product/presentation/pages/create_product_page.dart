@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
@@ -20,6 +19,7 @@ class _CreateProductPageState extends State<CreateProductPage> {
   final TextEditingController _categoryController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
   final ImagePicker _picker = ImagePicker();
   File? _selectedImage;
@@ -28,24 +28,55 @@ class _CreateProductPageState extends State<CreateProductPage> {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => sl<ProductBloc>(),
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Product Page'),
-          leading: IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.blue),
-          ),
-          centerTitle: true,
-        ),
-        body: buildBody(),
+      child: BlocConsumer<ProductBloc, ProductState>(
+        listener: (context, state) {
+          if (state is ErrorState) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message)),
+            );
+          }
+          if (state is LoadedAllProductState) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Product created successfully')),
+            );
+            // Return to previous screen signalling refresh
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context, true);
+            }
+          }
+        },
+        builder: (context, state) {
+          final isLoading = state is LoadingState;
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Create Product'),
+              leading: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.arrow_back_ios_new, color: Colors.blue),
+              ),
+              centerTitle: true,
+            ),
+      body: Stack(
+              children: [
+        buildBody(context, isLoading),
+                if (isLoading)
+                  Container(
+                    color: Colors.black26,
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget buildBody() {
+  Widget buildBody(BuildContext blocContext, [bool isLoading = false]) {
     return SingleChildScrollView(
       padding: const EdgeInsets.only(left: 14, right: 14, bottom: 40),
       child: Form(
+        key: _formKey,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
           child: Column(
@@ -84,20 +115,20 @@ class _CreateProductPageState extends State<CreateProductPage> {
               ),
               const SizedBox(height: 20),
               _buildLabel('Name'),
-              _buildTextField(_nameController),
+              _buildTextField(_nameController, validator: _required),
               const SizedBox(height: 10),
               _buildLabel('Category'),
-              _buildTextField(_categoryController),
+              _buildTextField(_categoryController, validator: _required),
               const SizedBox(height: 10),
               _buildLabel('Price'),
-              _buildTextField(_priceController, suffix: const Text('\$')),
+              _buildTextField(_priceController, suffix: const Text('\$'), keyboardType: TextInputType.number, validator: _priceValidator),
               const SizedBox(height: 10),
               _buildLabel('Description'),
-              _buildTextField(_descriptionController, maxLines: 4),
+              _buildTextField(_descriptionController, maxLines: 4, validator: _required),
               const SizedBox(height: 20),
 
               ElevatedButton(
-                onPressed: () => _submit(),
+                onPressed: isLoading ? null : () => _submit(blocContext),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   backgroundColor: Colors.blueAccent,
@@ -146,10 +177,14 @@ class _CreateProductPageState extends State<CreateProductPage> {
     TextEditingController controller, {
     int maxLines = 1,
     Widget? suffix,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
   }) {
-    return TextField(
+    return TextFormField(
       controller: controller,
       maxLines: maxLines,
+      keyboardType: keyboardType,
+      validator: validator,
       decoration: InputDecoration(
         filled: true,
         fillColor: Colors.grey[200],
@@ -157,30 +192,49 @@ class _CreateProductPageState extends State<CreateProductPage> {
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide.none,
         ),
+        errorStyle: const TextStyle(fontSize: 12),
         suffix: suffix,
       ),
     );
   }
 
-  void _submit(){
+  void _submit(BuildContext blocContext){
+    if(!_formKey.currentState!.validate()) return;
+
     final name = _nameController.text.trim();
-    final category = _categoryController.text.trim();
-    final price = _priceController.text.trim();
+  // final category = _categoryController.text.trim(); // category currently unused
+    final priceStr = _priceController.text.trim();
     final description = _descriptionController.text.trim();
+    final price = double.tryParse(priceStr) ?? 0.0;
 
-    _nameController.clear();
-    _categoryController.clear();
-    _priceController.clear();
-    _descriptionController.clear();
+  // Keep description as-is; category omitted from payload
+  final fullDescription = description;
 
-    if (name.isEmpty || category.isEmpty || description.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please fill all fields')),
-        );
-    }
+  // Temporary id placeholder (server generates real id). Using empty string avoids confusion.
+  const id = '';
+    final imageUrl = _selectedImage != null ? _selectedImage!.path : '';
 
+    final product = ProductModel(
+      id: id,
+      name: name,
+      description: fullDescription,
+      imageUrl: imageUrl,
+      price: price,
+    );
 
-    
+  blocContext.read<ProductBloc>().add(CreateProductEvent(product));
+  }
+
+  String? _required(String? v){
+    if(v==null || v.trim().isEmpty) return 'Required';
+    return null;
+  }
+
+  String? _priceValidator(String? v){
+    if(v==null || v.trim().isEmpty) return 'Required';
+    final val = double.tryParse(v);
+    if(val==null || val <= 0) return 'Enter valid price';
+    return null;
   }
 
 

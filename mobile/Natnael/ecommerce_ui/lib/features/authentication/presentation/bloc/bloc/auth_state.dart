@@ -13,11 +13,11 @@ class InitialState extends AuthState {}
 class LoadingState extends AuthState {}
 
 class SignUpState extends AuthState{
-   final Authentication authentication;
+  final String name;
 
-  const SignUpState(this.authentication);
+  const SignUpState(this.name);
   @override
-  List<Object> get props => [authentication];
+  List<Object> get props => [name];
 }
 
 class LoginState extends AuthState{

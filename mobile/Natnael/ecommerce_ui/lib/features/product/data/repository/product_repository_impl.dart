@@ -25,6 +25,7 @@ class ProductRepositoryImpl implements ProductRepository {
         description: product.description,
         imageUrl: product.imageUrl,
         price: product.price,
+  seller: product.seller,
       );
 
   Future<Either<Failure, T>> _getResponse<T>(

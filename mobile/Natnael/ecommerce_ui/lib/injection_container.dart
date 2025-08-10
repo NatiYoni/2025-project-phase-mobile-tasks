@@ -29,6 +29,18 @@ import 'features/product/domain/usecase/viewAll_products_usecase.dart';
 import 'features/product/domain/usecase/view_product_usecase.dart';
 import 'features/product/presentation/bloc/product_bloc.dart';
 
+//! chat related
+import 'features/chat/data/datasource/chat_remote_data_source.dart';
+import 'features/chat/data/repository/chat_repository_impl.dart';
+import 'features/chat/domain/repository/chat_repository.dart';
+import 'features/chat/domain/usecase/get_chats_usecase.dart';
+import 'features/chat/domain/usecase/get_messages_usecase.dart' as get_messages_uc;
+import 'features/chat/domain/usecase/get_message_stream_usecase.dart';
+import 'features/chat/domain/usecase/initiate_chat_usecase.dart' as initiate_chat_uc;
+import 'features/chat/domain/usecase/delete_chat_usecase.dart' as delete_chat_uc;
+import 'features/chat/domain/usecase/send_message_usecase.dart' as send_message_uc;
+import 'features/chat/presentation/bloc/chat_bloc.dart';
+
 final sl = GetIt.instance;
 Future<void> init() async {
   //! Features - Auth
@@ -112,4 +124,34 @@ Future<void> init() async {
   sl.registerLazySingleton<InternetConnectionChecker>(
     () => InternetConnectionChecker.createInstance(),
   );                      
+
+  //! Features - Chat (placed after external so http.Client is registered)
+  // Bloc
+  sl.registerFactory(() => ChatBloc(
+        remoteDataSource: sl(),
+        getChatsUsecase: sl(),
+        getMessagesUsecase: sl(),
+        getMessagesStreamUsecase: sl(),
+        initiateChatUsecase: sl(),
+        deleteChatUsecase: sl(),
+        sendMessageUsecase: sl(),
+      ));
+
+  // Use cases
+  sl.registerLazySingleton(() => GetChatsUsecase(sl()));
+  sl.registerLazySingleton(() => get_messages_uc.GetMessagesUsecase(sl()));
+  sl.registerLazySingleton(() => GetMessagesStreamUsecase(sl()));
+  sl.registerLazySingleton(() => initiate_chat_uc.InitiateChatUsecase(sl()));
+  sl.registerLazySingleton(() => delete_chat_uc.DeleteChatUsecase(sl()));
+  sl.registerLazySingleton(() => send_message_uc.SendMessageUsecase(sl()));
+
+  // Repository
+  sl.registerLazySingleton<ChatRepository>(() => ChatRepositoryImpl(
+        networkInfo: sl(),
+        remoteDataSource: sl(),
+      ));
+
+  // Data source
+  sl.registerLazySingleton<ChatRemoteDataSource>(
+      () => ChatRemoteDataSourceImpl(client: sl()));
 }
