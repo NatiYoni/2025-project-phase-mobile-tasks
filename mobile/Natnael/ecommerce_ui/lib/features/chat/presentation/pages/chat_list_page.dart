@@ -1,12 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/session/current_user.dart';
 
 import '../../../../injection_container.dart';
+import '../../../authentication/domain/entity/authentication.dart';
+import '../../../product/presentation/pages/all_products_page.dart';
 import '../../domain/entity/chat.dart';
 import '../bloc/chat_bloc.dart';
-
 import 'chat_detail_page.dart';
-import '../../../product/presentation/pages/all_products_page.dart';
 
 class ChatListPage extends StatefulWidget {
   final String token; // bearer token used to init socket
@@ -17,14 +20,21 @@ class ChatListPage extends StatefulWidget {
 }
 
 class _ChatListPageState extends State<ChatListPage> {
+  bool _showUsers = false;
+  ChatsLoaded? _lastLoaded; // cache to display while transient states occur
+    bool _initialDispatched = false;
   @override
   void initState() {
     super.initState();
     // Dispatch initial events after first frame (ensure bloc exists)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final bloc = context.read<ChatBloc>();
-      bloc.add(InitializeSocketEvent(widget.token));
-      bloc.add(GetChatsEvent());
+        final bloc = context.read<ChatBloc>();
+        if (!_initialDispatched) {
+          _initialDispatched = true;
+          bloc.add(InitializeSocketEvent(widget.token));
+          bloc.add(GetChatsEvent());
+          bloc.add(LoadUsersEvent(widget.token));
+        }
     });
   }
 
@@ -55,23 +65,61 @@ class _ChatListPageState extends State<ChatListPage> {
       backgroundColor: const Color(0xFFF3F5F9),
       body: SafeArea(
         bottom: false,
-        child: BlocBuilder<ChatBloc, ChatState>(
-          builder: (context, state) {
-            if (state is ChatsLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (state is ChatOperationFailure) {
-              return _ErrorView(message: state.message, onRetry: () => context.read<ChatBloc>().add(GetChatsEvent()));
-            }
-            if (state is ChatsLoaded) {
-              return _ChatListScaffold(
-                chats: state.chats,
-                onRefresh: _refresh,
-                onOpenChat: _openChat,
+        child: BlocListener<ChatBloc, ChatState>(
+          listenWhen: (prev, curr) => curr is ChatInitiated || curr is ChatOperationFailure,
+          listener: (context, state) {
+            if (state is ChatInitiated) {
+              // Navigate to detail page
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BlocProvider.value(
+                    value: context.read<ChatBloc>(),
+                    child: ChatDetailPage(chat: state.chat),
+                  ),
+                ),
               );
             }
-            return const Center(child: CircularProgressIndicator());
           },
+          child: BlocBuilder<ChatBloc, ChatState>(
+            builder: (context, state) {
+              if (state is ChatsLoaded) {
+                _lastLoaded = state; // update cache
+              }
+              final showing = state is ChatsLoaded || state is ChatInitiating || state is ChatInitiated;
+              if (state is ChatOperationFailure && _lastLoaded == null) {
+                return _ErrorView(message: state.message, onRetry: () => context.read<ChatBloc>().add(GetChatsEvent()));
+              }
+              if (!showing && _lastLoaded == null) {
+                // initial load
+                if (state is ChatsLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+              }
+              final base = _lastLoaded;
+              if (base == null) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              return Stack(
+                children: [
+                  _ChatListScaffold(
+                    chats: base.chats,
+                    users: base.users,
+                    showUsers: _showUsers,
+                    toggleUsers: () => setState(() => _showUsers = !_showUsers),
+                    token: widget.token,
+                    onRefresh: _refresh,
+                    onOpenChat: _openChat,
+                  ),
+                  if (state is ChatInitiating)
+                    Container(
+                      color: Colors.black.withOpacity(0.25),
+                      child: const Center(child: CircularProgressIndicator()),
+                    ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -83,9 +131,13 @@ class _ChatListPageState extends State<ChatListPage> {
 
 class _ChatListScaffold extends StatelessWidget {
   final List<Chat> chats;
+  final List<Authentication> users;
+  final bool showUsers;
+  final VoidCallback toggleUsers;
+  final String token;
   final Future<void> Function() onRefresh;
   final void Function(Chat) onOpenChat;
-  const _ChatListScaffold({required this.chats, required this.onRefresh, required this.onOpenChat});
+  const _ChatListScaffold({required this.chats, required this.users, required this.showUsers, required this.toggleUsers, required this.token, required this.onRefresh, required this.onOpenChat});
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +149,21 @@ class _ChatListScaffold extends StatelessWidget {
           const SizedBox(height: 12),
             const _Header(),
           const SizedBox(height: 12),
-          _StatusStrip(chats: chats),
+          Row(
+            children: [
+              const SizedBox(width:16),
+              const Text('Chats', style: TextStyle(fontSize:16,fontWeight: FontWeight.w600)),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: toggleUsers,
+                icon: Icon(showUsers ? Icons.close : Icons.person_add_alt_1, size:18),
+                label: Text(showUsers ? 'Close' : 'New Chat'),
+              ),
+            ],
+          ),
+          if (showUsers)
+            _UsersInlineGrid(users: users, token: token),
+          const SizedBox(height: 4),
           const SizedBox(height: 12),
           _ChatContainer(
             child: chats.isEmpty
@@ -187,106 +253,6 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _StatusStrip extends StatelessWidget {
-  final List<Chat> chats;
-  const _StatusStrip({required this.chats});
-
-  @override
-  Widget build(BuildContext context) {
-    // Build a pseudo "stories" list out of distinct other users from chats.
-    final others = chats.map((c) => c.user2.name ?? c.user1.name ?? 'User').toSet().toList();
-    return SizedBox(
-      height: 96,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: others.length.clamp(0, 10) + 1, // +1 for My status
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return const _StatusAvatar(label: 'My status', isMine: true);
-          }
-          final name = others[index - 1];
-          return _StatusAvatar(label: _firstName(name));
-        },
-      ),
-    );
-  }
-
-  String _firstName(String name) {
-    final parts = name.split(' ');
-    return parts.first.trim();
-  }
-}
-
-class _StatusAvatar extends StatelessWidget {
-  final String label;
-  final bool isMine;
-  const _StatusAvatar({required this.label, this.isMine = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 16.0),
-      child: Column(
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              CircleAvatar(
-                radius: 26,
-                backgroundColor: isMine ? const Color(0xFF1C59D2) : _randColor(label),
-                child: Text(
-                  label.isNotEmpty ? label[0].toUpperCase() : '?',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-              ),
-              if (isMine)
-                Positioned(
-                  bottom: -2,
-                  right: -2,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.all(2),
-                    child: const CircleAvatar(
-                      radius: 10,
-                      backgroundColor: Color(0xFF1C59D2),
-                      child: Icon(Icons.add, size: 14, color: Colors.white),
-                    ),
-                  ),
-                )
-            ],
-          ),
-          const SizedBox(height: 6),
-          SizedBox(
-            width: 60,
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color _randColor(String seed) {
-    final hash = seed.codeUnits.fold<int>(0, (p, c) => p + c);
-    final colors = [
-      const Color(0xFF6C63FF),
-      const Color(0xFF00B3A6),
-      const Color(0xFFEA5455),
-      const Color(0xFFFFA000),
-      const Color(0xFF2D9CDB),
-    ];
-    return colors[hash % colors.length];
-  }
-}
 
 class _ChatContainer extends StatelessWidget {
   final Widget child;
@@ -315,10 +281,15 @@ class _ChatRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final otherName = chat.user2.name ?? chat.user1.name ?? 'User';
-    final subText = _placeholderSubtitle(index);
-    final time = _placeholderTime(index);
-    final unread = index % 3 == 0; // pseudo unread indicator
+  final meId = CurrentUser.id;
+  final isUser1Me = meId != null && chat.user1.id == meId;
+  final other = isUser1Me ? chat.user2 : chat.user1;
+  final otherName = other.name ?? other.email;
+  final subText = chat.lastMessageContent ?? _placeholderSubtitle(index);
+  final time = chat.lastMessageAt != null
+    ? _formatTime(chat.lastMessageAt!)
+    : _placeholderTime(index);
+  final unread = chat.unreadCount > 0;
 
     return InkWell(
       onTap: onTap,
@@ -365,14 +336,16 @@ class _ChatRow extends StatelessWidget {
                       if (unread) ...[
                         const SizedBox(width: 8),
                         Container(
-                          width: 16,
-                          height: 16,
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: const BoxDecoration(
                             color: Color(0xFF1C59D2),
-                            shape: BoxShape.circle,
+                            borderRadius: BorderRadius.all(Radius.circular(10)),
                           ),
                           alignment: Alignment.center,
-                          child: const Text('1', style: TextStyle(color: Colors.white, fontSize: 10)),
+                          child: Text(
+                            chat.unreadCount.toString(),
+                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
                         )
                       ],
                     ],
@@ -400,6 +373,16 @@ class _ChatRow extends StatelessWidget {
   }
 
   String _placeholderTime(int i) => '2 min ago';
+  String _formatTime(DateTime dt) {
+    final now = DateTime.now();
+    if (dt.day == now.day && dt.month == now.month && dt.year == now.year) {
+      final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+      final m = dt.minute.toString().padLeft(2, '0');
+      final ampm = dt.hour >= 12 ? 'PM' : 'AM';
+      return '$h:$m $ampm';
+    }
+    return '${dt.month}/${dt.day}/${dt.year % 100}';
+  }
 }
 
 class _Avatar extends StatelessWidget {
@@ -452,14 +435,64 @@ class _ErrorView extends StatelessWidget {
   }
 }
 
+class _UsersInlineGrid extends StatelessWidget {
+  final List<Authentication> users; // Authentication
+  final String token;
+  const _UsersInlineGrid({required this.users, required this.token});
+  @override
+  Widget build(BuildContext context) {
+    if (users.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal:16.0, vertical:8),
+        child: Text('No other users available.'),
+      );
+    }
+    return SizedBox(
+      height: 120,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal:16),
+        scrollDirection: Axis.horizontal,
+        itemCount: users.length,
+        separatorBuilder: (_, __) => const SizedBox(width:12),
+        itemBuilder: (context, index) {
+          final u = users[index];
+          final name = (u.name == null || u.name!.isEmpty) ? u.email : u.name!;
+          return GestureDetector(
+            onTap: () => context.read<ChatBloc>().add(InitiateChatEvent(u.id ?? '')),
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 26,
+                  child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?'),
+                ),
+                const SizedBox(height: 6),
+                SizedBox(
+                  width: 70,
+                  child: Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                )
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
 class ChatListPageWrapper extends StatelessWidget {
   final String token;
   const ChatListPageWrapper({super.key, required this.token});
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => sl<ChatBloc>(),
+    // Use existing singleton without disposing it when page is popped.
+    return BlocProvider.value(
+      value: sl<ChatBloc>(),
       child: ChatListPage(token: token),
     );
   }

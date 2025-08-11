@@ -24,9 +24,13 @@ class SocketError extends ChatState {
 class ChatsLoading extends ChatState {}
 class ChatsLoaded extends ChatState {
 	final List<Chat> chats;
-	const ChatsLoaded(this.chats);
+	final List<Authentication> users;
+	const ChatsLoaded(this.chats, {this.users = const []});
 	@override
-	List<Object?> get props => [chats];
+	List<Object?> get props => [chats, users];
+
+	ChatsLoaded copyWith({List<Chat>? chats, List<Authentication>? users}) =>
+			ChatsLoaded(chats ?? this.chats, users: users ?? this.users);
 }
 
 // Single chat messages

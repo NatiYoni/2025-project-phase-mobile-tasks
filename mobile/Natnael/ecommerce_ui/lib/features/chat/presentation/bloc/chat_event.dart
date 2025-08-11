@@ -23,10 +23,18 @@ class GetChatsEvent extends ChatEvent {}
 /// Force a refresh (pull-to-refresh) of the chats list.
 class RefreshChatsEvent extends ChatEvent {}
 
-/// Fetch a single chat by id (metadata) if needed.
-class GetChatByIdEvent extends ChatEvent {
+/// Load users list for initiating new chats
+class LoadUsersEvent extends ChatEvent {
+  final String token;
+  const LoadUsersEvent(this.token);
+  @override
+  List<Object?> get props => [token];
+}
+
+/// Mark a chat as read locally (reset unread count)
+class MarkChatReadEvent extends ChatEvent {
   final String chatId;
-  const GetChatByIdEvent(this.chatId);
+  const MarkChatReadEvent(this.chatId);
   @override
   List<Object?> get props => [chatId];
 }
@@ -63,6 +71,9 @@ class DeleteChatEvent extends ChatEvent {
   @override
   List<Object?> get props => [chatId];
 }
+
+/// Gracefully dispose socket & streams (e.g., app exit)
+class ShutdownChatEvent extends ChatEvent {}
 
 /// Internal event that the BLoC will add to itself when a new message
 /// is received from the WebSocket stream.

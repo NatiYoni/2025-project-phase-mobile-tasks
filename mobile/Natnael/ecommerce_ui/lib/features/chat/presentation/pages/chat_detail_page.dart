@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/session/current_user.dart';
 
 import '../../domain/entity/chat.dart';
 import '../../domain/entity/message.dart';
@@ -16,7 +17,6 @@ class ChatDetailPage extends StatefulWidget {
 class _ChatDetailPageState extends State<ChatDetailPage> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scroll = ScrollController();
-  final List<Message> _pending = []; // optimistic local
 
   Color get _outgoingColor => const Color(0xFF4B4FFD);
   Color get _incomingColor => const Color(0xFFEAF1FF);
@@ -31,14 +31,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   void _send() {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
-    final temp = Message(
-      messageId: 'tmp-${DateTime.now().microsecondsSinceEpoch}',
-      sender: widget.chat.user1, // TODO: replace with actual logged-in user
-      chat: widget.chat,
-      content: text,
-      type: 'text',
-    );
-    setState(() => _pending.add(temp));
     context.read<ChatBloc>().add(SendMessageEvent(chatId: widget.chat.chatId, content: text));
     _controller.clear();
     _scrollToBottom();
@@ -67,9 +59,14 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         children: [
           Expanded(
             child: BlocConsumer<ChatBloc, ChatState>(
-              listenWhen: (p, c) => c is MessagesLoaded,
-              listener: (_, state) {
+              listenWhen: (p, c) => c is MessagesLoaded || c is ChatOperationFailure,
+              listener: (context, state) {
                 if (state is MessagesLoaded) _scrollToBottom();
+                if (state is ChatOperationFailure) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(state.message)),
+                  );
+                }
               },
               builder: (context, state) {
                 if (state is MessagesLoading && state.chatId == widget.chat.chatId) {
@@ -82,20 +79,17 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 if (state is MessagesLoaded && state.chatId == widget.chat.chatId) {
                   messages = state.messages;
                 }
-                // Merge optimistic
-                final displayed = [
-                  ...messages,
-                  ..._pending.where((p) => !messages.any((m) => m.content == p.content && m.sender.id == p.sender.id)),
-                ];
                 return ListView.builder(
                   controller: _scroll,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  itemCount: displayed.length,
+                  itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    final m = displayed[index];
-                    final previous = index > 0 ? displayed[index - 1] : null;
+                    final m = messages[index];
+                    final previous = index > 0 ? messages[index - 1] : null;
                     final isFirstOfGroup = previous == null || previous.sender.id != m.sender.id;
-                    final isMe = m.sender.id == widget.chat.user1.id;
+                    final isMe = CurrentUser.id != null
+                        ? m.sender.id == CurrentUser.id
+                        : m.sender.id == widget.chat.user1.id;
                     return _MessageBubble(
                       message: m,
                       isMe: isMe,

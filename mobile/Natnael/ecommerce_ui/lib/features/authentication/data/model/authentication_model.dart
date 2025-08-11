@@ -12,11 +12,10 @@ class AuthenticationModel extends Authentication {
     return AuthenticationModel(
       name: json['name'],
       email: json['email'],
-      id: json['id'],
+      id: json['_id'] ?? json['id'],
       password: '',
     );
   }
-
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = {
@@ -26,6 +25,9 @@ class AuthenticationModel extends Authentication {
     // Only include the name in the JSON if it's not null.
     if (name != null) {
       data['name'] = name;
+    }
+    if (id != null) {
+      data['_id'] = id;
     }
     
     return data;

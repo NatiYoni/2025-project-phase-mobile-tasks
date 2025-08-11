@@ -15,6 +15,8 @@ import 'features/authentication/domain/repository/authentication_repository.dart
 import 'features/authentication/domain/usecase/login_usecase.dart';
 import 'features/authentication/domain/usecase/logout_usecase.dart';
 import 'features/authentication/domain/usecase/sign_up_usecase.dart';
+import 'features/authentication/domain/usecase/get_all_users_usecase.dart';
+import 'features/authentication/domain/usecase/get_current_user_usecase.dart';
 import 'features/authentication/presentation/bloc/bloc/auth_bloc.dart';
 
 //! Proudct realted
@@ -57,6 +59,12 @@ Future<void> init() async {
   sl.registerLazySingleton(() => LoginUsecase(sl()));
   sl.registerLazySingleton(() => LogoutUsecase(sl()));
   sl.registerLazySingleton(() => SignUpUsecase(sl()));
+  if (!sl.isRegistered<GetAllUsersUsecase>()) {
+    sl.registerLazySingleton(() => GetAllUsersUsecase(sl()));
+  }
+  if (!sl.isRegistered<GetCurrentUserUsecase>()) {
+    sl.registerLazySingleton(() => GetCurrentUserUsecase(sl()));
+  }
 
   // Repository
   sl.registerLazySingleton<AuthenticationRepository>(
@@ -126,16 +134,19 @@ Future<void> init() async {
   );                      
 
   //! Features - Chat (placed after external so http.Client is registered)
-  // Bloc
-  sl.registerFactory(() => ChatBloc(
-        remoteDataSource: sl(),
-        getChatsUsecase: sl(),
-        getMessagesUsecase: sl(),
-        getMessagesStreamUsecase: sl(),
-        initiateChatUsecase: sl(),
-        deleteChatUsecase: sl(),
-        sendMessageUsecase: sl(),
-      ));
+  // Bloc as singleton so socket stays alive app-wide
+  if (!sl.isRegistered<ChatBloc>()) {
+    sl.registerLazySingleton(() => ChatBloc(
+          remoteDataSource: sl(),
+          getChatsUsecase: sl(),
+          getMessagesUsecase: sl(),
+          getMessagesStreamUsecase: sl(),
+          initiateChatUsecase: sl(),
+          deleteChatUsecase: sl(),
+          sendMessageUsecase: sl(),
+          getAllUsersUsecase: sl(),
+        ));
+  }
 
   // Use cases
   sl.registerLazySingleton(() => GetChatsUsecase(sl()));

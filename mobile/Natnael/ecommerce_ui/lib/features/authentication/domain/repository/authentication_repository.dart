@@ -8,5 +8,7 @@ abstract class AuthenticationRepository {
   Future<Either<Failure, Authentication>> signUp(Authentication authentication);
   Future<Either<Failure, String>> login(Authentication authentication);
   Future<Either<Failure, void>> logout();
+  Future<Either<Failure, List<Authentication>>> getAllUsers(String token);
+  Future<Either<Failure, Authentication>> getCurrentUser(String token);
 
 }

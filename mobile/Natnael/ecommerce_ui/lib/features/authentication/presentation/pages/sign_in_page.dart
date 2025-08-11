@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 
+import '../../../../core/session/current_user.dart';
+import '../../domain/usecase/get_current_user_usecase.dart' as get_current_user_uc;
 import '../../../../injection_container.dart';
 import '../../../product/presentation/pages/all_products_page.dart';
 import '../../domain/entity/authentication.dart';
 import '../bloc/bloc/auth_bloc.dart';
 import 'create_account_page.dart';
+// Import ChatBloc to allow early socket initialization after login.
+import '../../../chat/presentation/bloc/chat_bloc.dart';
 
 class SignInPage extends StatelessWidget {
   const SignInPage({super.key});
@@ -201,29 +203,21 @@ class _SignInFormState extends State<SignInForm> {
   Future<void> _fetchProfileAndGo(String token) async {
     String name = 'User';
     try {
-      final res = await http.get(
-        // Using same base host variant as auth BASE_URL for consistency
-        Uri.parse('https://g5-flutter-learning-path-be-tvum.onrender.com/api/v3/users/me'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
+      final usecase = sl<get_current_user_uc.GetCurrentUserUsecase>();
+      final result = await usecase(get_current_user_uc.Params(token));
+      result.fold(
+        (failure) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Failed to load profile')),
+            );
+          }
+        },
+        (auth) {
+          name = auth.name ?? name;
+          CurrentUser.set(id: auth.id, name: auth.name, email: auth.email);
         },
       );
-      if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
-        final data = body['data'];
-        if (data is Map && data['name'] != null) {
-          name = data['name'].toString();
-        }
-        // ignore else; keep default name fallback
-      } else {
-        // Surface an error so we know why name fallback is used
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Profile fetch failed (${res.statusCode})')),
-          );
-        }
-      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -238,6 +232,14 @@ class _SignInFormState extends State<SignInForm> {
         builder: (_) => AllProductsPage(token: token, userName: name),
       ),
     );
+    try {
+      final chatBloc = sl<ChatBloc>();
+      if (chatBloc.state is! SocketReady && chatBloc.state is! ChatsLoaded) {
+        chatBloc.add(InitializeSocketEvent(token));
+      }
+      chatBloc.add(GetChatsEvent());
+      chatBloc.add(LoadUsersEvent(token));
+    } catch (_) {}
   }
 }
 

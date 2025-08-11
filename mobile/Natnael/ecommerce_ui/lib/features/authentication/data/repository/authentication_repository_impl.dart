@@ -92,5 +92,21 @@ class AuthenticationRepositoryImpl implements AuthenticationRepository {
       return remoteAuth;
     });
   }
+
+  @override
+  Future<Either<Failure, List<Authentication>>> getAllUsers(String token) async {
+    return await _getResponse<List<Authentication>>(() async {
+      final models = await remoteDataSource.getAllUsers(token);
+      return models; // models already extend Authentication
+    });
+  }
+
+  @override
+  Future<Either<Failure, Authentication>> getCurrentUser(String token) async {
+    return await _getResponse<Authentication>(() async {
+      final model = await remoteDataSource.getCurrentUser(token);
+      return model; // extends entity
+    });
+  }
   
 }

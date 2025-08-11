@@ -82,9 +82,16 @@ class ChatRepositoryImpl implements ChatRepository {
     required String chatId,
     required String content,
   }) {
-    return _getResponse(() async => remoteDataSource.sendMessage(
-          chatId: chatId,
-          content: content,
-        ));
+    // For live socket ops, attempt without networkInfo gate; remote method now awaits ack.
+    return Future(() async {
+      try {
+        await remoteDataSource.sendMessage(chatId: chatId, content: content);
+        return const Right<Failure, void>(null);
+      } on SocketException {
+        return Left<Failure, void>(SocketFailure());
+      } catch (_) {
+        return Left<Failure, void>(ServerFailure());
+      }
+    });
   }
 }

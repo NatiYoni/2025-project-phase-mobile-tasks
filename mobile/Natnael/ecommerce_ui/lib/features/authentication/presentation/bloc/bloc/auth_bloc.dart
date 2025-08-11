@@ -8,6 +8,9 @@ import '../../../domain/entity/authentication.dart';
 import '../../../domain/usecase/login_usecase.dart' as login_usecase;
 import '../../../domain/usecase/logout_usecase.dart';
 import '../../../domain/usecase/sign_up_usecase.dart' as sign_up_usecase;
+import '../../../../../core/session/current_user.dart';
+import '../../../../chat/presentation/bloc/chat_bloc.dart';
+import '../../../../../injection_container.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -63,7 +66,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final failureOrSuccess = await logout(NoParams());
     failureOrSuccess.fold(
       (failure) => emit(ErrorState(_mapFailureToMessage(failure))),
-      (_) => emit(const LogoutState()),
+      (_) {
+        CurrentUser.clear();
+        // Attempt to shutdown chat socket gracefully
+        try { sl<ChatBloc>().add(ShutdownChatEvent()); } catch (_) {}
+        emit(const LogoutState());
+      },
     );
   }
 

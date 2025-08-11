@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'features/authentication/presentation/pages/splash_page.dart';
 import 'injection_container.dart' as di;
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'features/chat/presentation/bloc/chat_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,10 +16,13 @@ class MyApp extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Product App',
-      home: SplashPage(),
+    return BlocProvider.value(
+      value: di.sl<ChatBloc>(),
+      child: const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Product App',
+        home: SplashPage(),
+      ),
     );
   }
 }

@@ -7,6 +7,7 @@ import '../../domain/entity/product.dart';
 import '../bloc/product_bloc.dart';
 import '../../../chat/presentation/bloc/chat_bloc.dart';
 import '../../../chat/presentation/pages/chat_detail_page.dart';
+import '../../../chat/presentation/pages/chat_list_page.dart';
 
 class ProductDetailPage extends StatelessWidget {
   final String productId;
@@ -19,8 +20,6 @@ class ProductDetailPage extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => sl<ProductBloc>()..add(GetSingleProductEvent(productId))),
-        if (authToken != null)
-          BlocProvider(create: (_) => sl<ChatBloc>()..add(InitializeSocketEvent(authToken!))),
       ],
       child: BlocConsumer<ProductBloc, ProductState>(
         listener: (context, state) {
@@ -203,9 +202,13 @@ class _ContactSellerBar extends StatelessWidget {
                   ),
                 ),
                 ElevatedButton.icon(
-                  onPressed: enabled && !isBusy
+                  onPressed: enabled && !isBusy && token != null
                       ? () {
-                          context.read<ChatBloc>().add(InitiateChatEvent(seller.id ?? ''));
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ChatListPageWrapper(token: token!),
+                            ),
+                          );
                         }
                       : null,
                   style: ElevatedButton.styleFrom(
@@ -221,7 +224,7 @@ class _ContactSellerBar extends StatelessWidget {
                         )
                       : const Icon(Icons.chat_bubble_outline, size: 18, color: Colors.white),
                   label: Text(
-                    isBusy ? 'Starting…' : 'Contact us',
+                    isBusy ? 'Loading…' : 'Chat',
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                   ),
                 ),
